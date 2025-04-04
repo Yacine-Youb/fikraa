@@ -164,16 +164,185 @@ try {
         exit;
     }
 
+    // Check database tables endpoint
+    if ($table === "check_tables") {
+        try {
+            $tables = ['individuals', 'family_relations', 'social_status_info', 'additional_social_status'];
+            $results = [];
+            
+            foreach ($tables as $tableName) {
+                // Check if table exists
+                $checkQuery = "SHOW TABLES LIKE '$tableName'";
+                $result = $conn->query($checkQuery);
+                
+                if ($result && $result->num_rows > 0) {
+                    // Table exists, get structure
+                    $describeQuery = "DESCRIBE $tableName";
+                    $structureResult = $conn->query($describeQuery);
+                    
+                    if ($structureResult) {
+                        $structure = [];
+                        $columns = [];
+                        while ($row = $structureResult->fetch_assoc()) {
+                            $structure[] = $row;
+                            $columns[] = $row['Field'];
+                        }
+                        $results[$tableName] = [
+                            'exists' => true,
+                            'structure' => $structure,
+                            'columns' => $columns
+                        ];
+                        
+                        // Check key information
+                        $keyQuery = "SHOW KEYS FROM $tableName";
+                        $keyResult = $conn->query($keyQuery);
+                        if ($keyResult) {
+                            $keys = [];
+                            while ($keyRow = $keyResult->fetch_assoc()) {
+                                $keys[] = $keyRow;
+                            }
+                            $results[$tableName]['keys'] = $keys;
+                        }
+                    } else {
+                        $results[$tableName] = [
+                            'exists' => true,
+                            'error' => "Could not describe table: " . $conn->error
+                        ];
+                    }
+                    
+                    // Get row count
+                    $countQuery = "SELECT COUNT(*) as count FROM $tableName";
+                    $countResult = $conn->query($countQuery);
+                    if ($countResult) {
+                        $countRow = $countResult->fetch_assoc();
+                        $results[$tableName]['row_count'] = $countRow['count'];
+                    }
+                } else {
+                    $results[$tableName] = [
+                        'exists' => false,
+                        'error' => "Table does not exist"
+                    ];
+                }
+            }
+            
+            // Check database version
+            $versionQuery = "SELECT VERSION() as version";
+            $versionResult = $conn->query($versionQuery);
+            if ($versionResult) {
+                $versionRow = $versionResult->fetch_assoc();
+                $results['database_info'] = [
+                    'version' => $versionRow['version'],
+                    'server_info' => $conn->server_info,
+                    'host_info' => $conn->host_info
+                ];
+            }
+            
+            echo json_encode([
+                'status' => 'success',
+                'tables' => $results
+            ]);
+        } catch (Exception $e) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+
     switch ($method) {
         case 'GET': 
             if ($table === "individuals") {
+                // Log all GET parameters for debugging
+                error_log("GET parameters: " . print_r($_GET, true));
+                
+                // Build filters based on GET parameters
+                $filters = [];
+                
+                // Handle status filter (can be array or single value)
+                if (isset($_GET['status'])) {
+                    error_log("Status filter: " . print_r($_GET['status'], true));
+                    
+                    // Check if status is an array (status[])
+                    if (is_array($_GET['status'])) {
+                        $statusValues = array_map(function($val) use ($conn) {
+                            return "'" . $conn->real_escape_string($val) . "'";
+                        }, $_GET['status']);
+                        $filters[] = "i.status IN (" . implode(',', $statusValues) . ")";
+                    } else {
+                        $filters[] = "i.status = '" . $conn->real_escape_string($_GET['status']) . "'";
+                    }
+                }
+                
+                // Handle last name filter
+                if (isset($_GET['last_name']) && $_GET['last_name'] !== '') {
+                    error_log("Last name filter: " . $_GET['last_name']);
+                    $filters[] = "i.last_name LIKE '%" . $conn->real_escape_string($_GET['last_name']) . "%'";
+                }
+                
+                // Handle special status filter (can be array or single value)
+                if (isset($_GET['special_status'])) {
+                    error_log("Special status filter: " . print_r($_GET['special_status'], true));
+                    
+                    // Check if special_status is an array
+                    if (is_array($_GET['special_status'])) {
+                        $specialStatusValues = array_map(function($val) use ($conn) {
+                            return "'" . $conn->real_escape_string($val) . "'";
+                        }, $_GET['special_status']);
+                        $filters[] = "ass.status IN (" . implode(',', $specialStatusValues) . ")";
+                    } else {
+                        $filters[] = "ass.status = '" . $conn->real_escape_string($_GET['special_status']) . "'";
+                    }
+                }
+                
+                // Handle date range filters
+                if (isset($_GET['from_date']) && $_GET['from_date'] !== '') {
+                    error_log("From date filter: " . $_GET['from_date']);
+                    $filters[] = "i.registration_date >= '" . $conn->real_escape_string($_GET['from_date']) . "'";
+                }
+                
+                if (isset($_GET['to_date']) && $_GET['to_date'] !== '') {
+                    error_log("To date filter: " . $_GET['to_date']);
+                    $filters[] = "i.registration_date <= '" . $conn->real_escape_string($_GET['to_date']) . "'";
+                }
+                
+                // Handle search filter
+                if (isset($_GET['search']) && $_GET['search'] !== '') {
+                    error_log("Search filter: " . $_GET['search']);
+                    $search = $conn->real_escape_string($_GET['search']);
+                    $filters[] = "(i.first_name LIKE '%$search%' OR i.last_name LIKE '%$search%' OR i.id LIKE '%$search%')";
+                }
+                
+                // Handle occupation filter
+                if (!empty($_GET['occupation'])) {
+                    $filters[] = "ssi.occupation = '" . $conn->real_escape_string($_GET['occupation']) . "'";
+                }
+                
+                // Handle marital status filter
+                if (!empty($_GET['marital_status'])) {
+                    $filters[] = "i.marital_status = '" . $conn->real_escape_string($_GET['marital_status']) . "'";
+                }
+                
+                // Handle additional status filter
+                if (!empty($_GET['additional_status'])) {
+                    $filters[] = "ass.status = '" . $conn->real_escape_string($_GET['additional_status']) . "'";
+                }
+
+                // Build the WHERE clause
+                $filterQuery = !empty($filters) ? "WHERE " . implode(" AND ", $filters) : "";
+                
+                // Execute the query with filters
                 $query = "SELECT i.*, ssi.occupation, ssi.occupation_type, ssi.occupation_place, 
                                 ssi.study_year, ssi.speciality, ssi.school, ssi.quran, ssi.retirement_info,
                                 GROUP_CONCAT(ass.status) AS additional_statuses
                          FROM individuals i 
                          LEFT JOIN social_status_info ssi ON i.id = ssi.individual_id 
                          LEFT JOIN additional_social_status ass ON i.id = ass.individual_id 
+                         $filterQuery 
                          GROUP BY i.id";
+                
+                // Log the query for debugging
+                error_log("Filter Query: $query");
                 
                 $result = $conn->query($query);
                 if (!$result) {
@@ -187,32 +356,7 @@ try {
                 echo json_encode($data);
                 exit;
             }
-            $filters = [];
-            if (!empty($_GET['occupation'])) {
-                $filters[] = "ssi.occupation = '" . $conn->real_escape_string($_GET['occupation']) . "'";
-            }
-            if (!empty($_GET['marital_status'])) {
-                $filters[] = "i.marital_status = '" . $conn->real_escape_string($_GET['marital_status']) . "'";
-            }
-            if (!empty($_GET['additional_status'])) {
-                $filters[] = "ass.status = '" . $conn->real_escape_string($_GET['additional_status']) . "'";
-            }
-
-            $filterQuery = !empty($filters) ? "WHERE " . implode(" AND ", $filters) : "";
-
-            if ($table === "individuals") {
-                $query = "SELECT i.*, ssi.occupation, ssi.occupation_type, ssi.occupation_place, 
-                                ssi.study_year, ssi.speciality, ssi.school, ssi.quran, ssi.retirement_info,
-                                GROUP_CONCAT(ass.status) AS additional_statuses
-                         FROM individuals i 
-                         LEFT JOIN social_status_info ssi ON i.id = ssi.individual_id 
-                         LEFT JOIN additional_social_status ass ON i.id = ass.individual_id 
-                         $filterQuery 
-                         GROUP BY i.id";
-            } else {
-                $query = $id ? "SELECT * FROM $table WHERE id = $id" : "SELECT * FROM $table";
-            }
-
+            $query = $id ? "SELECT * FROM $table WHERE id = $id" : "SELECT * FROM $table";
             $result = $conn->query($query);
             $data = [];
             while ($row = $result->fetch_assoc()) {
@@ -223,11 +367,134 @@ try {
 
         case 'POST':
             $input = json_decode(file_get_contents("php://input"), true);
-            $columns = implode(",", array_keys($input));
-            $values = implode("','", array_values($input));
-            $query = "INSERT INTO $table ($columns) VALUES ('$values')";
-            $response = $conn->query($query);
-            echo json_encode(["status" => $response ? "success" : "error"]);
+            if (!$input) {
+                echo json_encode([
+                    "status" => "error",
+                    "message" => "Invalid JSON data"
+                ]);
+                exit;
+            }
+            
+            // Log the input data
+            error_log("POST data for table $table: " . print_r($input, true));
+            
+            if ($table === "individuals") {
+                // Log the full input data
+                error_log("Full input data for new member: " . print_r($input, true));
+                
+                // Try simplified approach for debugging
+                try {
+                    // Start a transaction
+                    $conn->begin_transaction();
+                    
+                    // Collect all main fields with validation
+                    $first_name = $conn->real_escape_string($input['first_name'] ?? '');
+                    $last_name = $conn->real_escape_string($input['last_name'] ?? '');
+                    $gender = $conn->real_escape_string($input['gender'] ?? '');
+                    $marital_status = $conn->real_escape_string($input['marital_status'] ?? '');
+                    $birth_date = $conn->real_escape_string($input['birth_date'] ?? ''); 
+                    $status = $conn->real_escape_string($input['status'] ?? 'active');
+                    $phone = $conn->real_escape_string($input['phone'] ?? '');
+                    $address = $conn->real_escape_string($input['address'] ?? '');
+                    
+                    // Log all fields
+                    error_log("Processed fields: first_name=$first_name, last_name=$last_name, gender=$gender, " .
+                             "marital_status=$marital_status, birth_date=$birth_date, status=$status, " .
+                             "phone=$phone, address=$address");
+                    
+                    // Try method 1 - Prepared statement
+                    try {
+                        // Create a query including all fields
+                        $query = "INSERT INTO individuals (first_name, last_name, gender, marital_status, birth_date, status, phone, address) 
+                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                        error_log("Method 1 - Prepared statement query: " . $query);
+                        
+                        $stmt = $conn->prepare($query);
+                        if (!$stmt) {
+                            throw new Exception("Prepare error: " . $conn->error);
+                        }
+                        
+                        // Bind parameters
+                        $stmt->bind_param("ssssssss", $first_name, $last_name, $gender, $marital_status, 
+                                         $birth_date, $status, $phone, $address);
+                        
+                        // Execute
+                        if (!$stmt->execute()) {
+                            throw new Exception("Execute error: " . $stmt->error);
+                        }
+                        
+                        $individualId = $stmt->insert_id;
+                        $method = "prepared statement";
+                    } catch (Exception $e) {
+                        error_log("Method 1 failed: " . $e->getMessage());
+                        
+                        // Try method 2 - Direct SQL query
+                        $directQuery = "INSERT INTO individuals (first_name, last_name, gender, marital_status, birth_date, status, phone, address) 
+                                    VALUES ('$first_name', '$last_name', '$gender', '$marital_status', '$birth_date', '$status', '$phone', '$address')";
+                        error_log("Method 2 - Direct SQL query: " . $directQuery);
+                        
+                        $result = $conn->query($directQuery);
+                        if (!$result) {
+                            throw new Exception("Direct query error: " . $conn->error);
+                        }
+                        
+                        $individualId = $conn->insert_id;
+                        $method = "direct query";
+                    }
+                    
+                    // Check if we actually inserted a row
+                    if (!$individualId) {
+                        throw new Exception("Insert appeared to succeed but no ID was returned");
+                    }
+                    
+                    // Commit transaction
+                    $conn->commit();
+                    
+                    echo json_encode([
+                        "status" => "success",
+                        "message" => "Member added successfully (using $method)",
+                        "id" => $individualId
+                    ]);
+                    
+                } catch (Exception $e) {
+                    // Rollback on error
+                    $conn->rollback();
+                    
+                    error_log("All methods failed: " . $e->getMessage());
+                    
+                    // Check database connection
+                    if ($conn->ping()) {
+                        error_log("Database connection is still good");
+                    } else {
+                        error_log("Database connection lost: " . $conn->error);
+                    }
+                    
+                    // Get table status
+                    $tableStatusQuery = "SHOW TABLE STATUS LIKE 'individuals'";
+                    $tableStatusResult = $conn->query($tableStatusQuery);
+                    if ($tableStatusResult) {
+                        $tableStatus = $tableStatusResult->fetch_assoc();
+                        error_log("Table status: " . print_r($tableStatus, true));
+                    } else {
+                        error_log("Unable to get table status: " . $conn->error);
+                    }
+                    
+                    echo json_encode([
+                        "status" => "error",
+                        "message" => "Failed to add member",
+                        "details" => $e->getMessage()
+                    ]);
+                }
+                
+                exit;
+            } else {
+                // For other tables, use the original code
+                $columns = implode(",", array_keys($input));
+                $values = implode("','", array_values($input));
+                $query = "INSERT INTO $table ($columns) VALUES ('$values')";
+                $response = $conn->query($query);
+                echo json_encode(["status" => $response ? "success" : "error"]);
+            }
             break;
 
         case 'PUT':

@@ -864,12 +864,17 @@
                     
                     <!-- Action Buttons -->
                     <div class="filter-actions">
-                        <button class="filter-btn apply-btn">
+                        <button class="filter-btn apply-btn" id="apply-filters">
                             <i class="fas fa-check"></i> Apply Filters
                         </button>
-                        <button class="filter-btn reset-btn">
+                        <button class="filter-btn reset-btn" id="reset-filters">
                             <i class="fas fa-undo"></i> Reset
                         </button>
+                    </div>
+                    
+                    <!-- Active Filters Display -->
+                    <div class="active-filters" id="active-filters-display" style="display: none;">
+                        <!-- Active filters will be shown here -->
                     </div>
                 </div>
             </div>
@@ -884,6 +889,9 @@
                 </button>
                 <button class="action-btn delete-btn">
                     <i class="fas fa-file-export"></i> Export Data
+                </button>
+                <button class="action-btn view-btn" onclick="checkDatabaseTables()" style="margin-left: auto;">
+                    <i class="fas fa-database"></i> Check Database
                 </button>
             </div>
 
@@ -903,6 +911,12 @@
                     <!-- Table content will be populated by JavaScript -->
                 </tbody>
             </table>
+            
+            <!-- Loading Indicator -->
+            <div id="loading-indicator" style="display: none; text-align: center; padding: 20px;">
+                <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--primary);"></i>
+                <p>Loading members...</p>
+            </div>
         </div>
 
         <!-- Family Tree View (Initially hidden) -->
@@ -1017,62 +1031,114 @@
                 <form id="member-form">
                     <div class="form-group">
                         <label>First Name</label>
-                        <input type="text" required>
+                        <input type="text" name="first_name" id="first_name" required>
                     </div>
                     <div class="form-group">
                         <label>Last Name (Family Name)</label>
-                        <input type="text" required>
+                        <input type="text" name="last_name" id="last_name" required>
                     </div>
                     <div class="form-group">
                         <label>Gender</label>
-                        <select required>
+                        <select name="gender" id="gender" required>
                             <option value="">Select</option>
                             <option value="male">Male</option>
                             <option value="female">Female</option>
                         </select>
                     </div>
-                    
-                    <h3>Family Relationships</h3>
-                    
                     <div class="form-group">
-                        <label>Father's Information</label>
-                        <div class="search-bar">
-                            <input type="text" placeholder="Search for father...">
-                            <button type="button"><i class="fas fa-search"></i></button>
+                        <label>Date of Birth</label>
+                        <input type="date" name="birth_date" id="birth_date">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status" id="status">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Marital Status</label>
+                        <select name="marital_status" id="marital_status">
+                            <option value="">Select</option>
+                            <option value="single">Single</option>
+                            <option value="married">Married</option>
+                            <option value="divorced">Divorced</option>
+                            <option value="widowed">Widowed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Phone</label>
+                        <input type="tel" name="phone" id="phone">
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <textarea name="address" id="address" rows="2"></textarea>
+                    </div>
+                    
+                    <h3>Father Information</h3>
+                    <div class="search-section">
+                        <div class="form-group">
+                            <label>Search or Add Father</label>
+                            <div class="search-row">
+                                <input type="text" id="father_search_first" name="father_first_name" placeholder="Father's First Name">
+                                <input type="date" id="father_search_dob" name="father_birth_date" placeholder="Birth Date">
+                                <button type="button" id="search_father_btn" class="action-btn view-btn">Search</button>
+                            </div>
+                        </div>
+                        
+                        <div id="father-search-results" style="margin-top: 10px; display: none;">
+                            <h4>Found fathers:</h4>
+                            <div id="father-matches" class="search-results"></div>
+                        </div>
+                        
+                        <div id="selected-father" class="selected-person" style="margin-top: 15px; display: none;">
+                            <h4>Selected Father:</h4>
+                            <div class="person-info"></div>
+                            <input type="hidden" id="selected_father_id" name="selected_father_id">
+                            <button type="button" id="clear_father_btn" class="action-btn delete-btn">Clear Selection</button>
                         </div>
                     </div>
+
+                    <h3>Family Relationships</h3>
                     
                     <div class="form-group">
                         <label>Mother's Information</label>
                         <div class="search-bar">
-                            <input type="text" placeholder="Search for mother...">
+                            <input type="text" name="mother_search" id="mother_search" placeholder="Search for mother...">
                             <button type="button"><i class="fas fa-search"></i></button>
                         </div>
+                        <input type="hidden" name="mother_id" id="mother_id">
                     </div>
                     
                     <div class="form-group">
                         <label>Spouse's Information (if married)</label>
                         <div class="search-bar">
-                            <input type="text" placeholder="Search for spouse...">
+                            <input type="text" name="spouse_search" id="spouse_search" placeholder="Search for spouse...">
                             <button type="button"><i class="fas fa-search"></i></button>
                         </div>
+                        <input type="hidden" name="spouse_id" id="spouse_id">
                     </div>
                     
                     <div class="form-group">
                         <label>Known Siblings</label>
                         <div class="search-bar">
-                            <input type="text" placeholder="Search for siblings...">
+                            <input type="text" name="sibling_search" id="sibling_search" placeholder="Search for siblings...">
                             <button type="button"><i class="fas fa-search"></i></button>
                         </div>
                         <div class="siblings-list" id="selected-siblings" style="margin-top: 10px;">
                             <!-- Selected siblings will appear here -->
                         </div>
+                        <input type="hidden" name="sibling_ids" id="sibling_ids">
                     </div>
+                    
+                    <!-- Form success/error message -->
+                    <div id="form-message" style="margin-top: 15px; padding: 10px; border-radius: 4px; display: none;"></div>
                 </form>
             </div>
             <div class="form-actions">
                 <button class="action-btn delete-btn" onclick="closeModal('add-member')">Cancel</button>
-                <button class="action-btn view-btn">Save Member</button>
+                <button class="action-btn view-btn" id="save-member-btn">Save Member</button>
             </div>
         </div>
     </div>
@@ -1162,58 +1228,228 @@
         }
         
         // View member function
-        function viewMember(memberId) {
-            // In a real app, you would fetch member data here
-            // This is just for demonstration
-            const memberData = {
-                id: memberId,
-                name: memberId === 'CM1001' ? 'John Smith' : 
-                     memberId === 'CM1002' ? 'Mary Smith' : 'Michael Smith',
-                gender: memberId === 'CM1002' ? 'female' : 'male',
-                status: 'Active',
-                father: 'James Smith',
-                mother: 'Margaret Smith',
-                spouse: memberId === 'CM1001' ? 'Mary Smith' : 
-                       memberId === 'CM1002' ? 'John Smith' : '',
-                siblings: ['Sarah Smith', 'Emily Smith'],
-                children: memberId === 'CM1001' ? ['Michael Smith', 'Sarah Smith', 'Emily Smith'] : []
-            };
-            
-            // Populate the modal with data
-            document.getElementById('member-name').textContent = memberData.name;
-            document.getElementById('member-gender').textContent = memberData.gender.charAt(0).toUpperCase() + memberData.gender.slice(1);
-            document.getElementById('member-gender').className = memberData.gender + '-badge';
-            document.getElementById('father-name').textContent = memberData.father;
-            document.getElementById('mother-name').textContent = memberData.mother;
-            document.getElementById('spouse-name').textContent = memberData.spouse || 'None';
-            
-            // Populate siblings
-            const siblingsList = document.querySelector('#view-member-modal .siblings-list');
-            siblingsList.innerHTML = '';
-            memberData.siblings.forEach(sibling => {
-                const gender = sibling === 'Sarah Smith' || sibling === 'Emily Smith' ? 'female' : 'male';
-                const siblingEl = document.createElement('div');
-                siblingEl.className = `sibling-badge ${gender}`;
-                siblingEl.innerHTML = `<i class="fas fa-${gender}"></i><span>${sibling}</span>`;
-                siblingsList.appendChild(siblingEl);
-            });
-            
-            // Populate children if any
-            const childrenList = document.querySelector('#view-member-modal .children-list');
-            childrenList.innerHTML = '';
-            if (memberData.children && memberData.children.length > 0) {
-                memberData.children.forEach(child => {
-                    const gender = child === 'Michael Smith' ? 'male' : 'female';
-                    const childEl = document.createElement('div');
-                    childEl.className = `sibling-badge ${gender}`;
-                    childEl.innerHTML = `<i class="fas fa-${gender}"></i><span>${child}</span>`;
-                    childrenList.appendChild(childEl);
-                });
-            } else {
-                childrenList.innerHTML = '<p>No children registered</p>';
+        async function viewMember(memberId) {
+            try {
+                // Show loading indicator in the modal
+                const modal = document.getElementById('view-member-modal');
+                const modalBody = modal.querySelector('.modal-body');
+                modalBody.innerHTML = '<div style="text-align: center; padding: 30px;"><i class="fas fa-spinner fa-spin"></i> Loading member data...</div>';
+                
+                // Open modal with loading state
+                openModal('view-member');
+                
+                // Fetch member data from API
+                const response = await fetch(`http://localhost/fikraa/api.php?table=individuals&id=${memberId}`);
+                const data = await response.json();
+                
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error('No member found with this ID');
+                }
+                
+                const memberData = data[0];
+                console.log('Member data:', memberData);
+                
+                // Fetch relationships for this member
+                let father = null;
+                let mother = null;
+                let spouse = null;
+                let children = [];
+                let siblings = [];
+                
+                try {
+                    // Get family relations
+                    const relationsResponse = await fetch(`http://localhost/fikraa/api.php?table=family_relations`);
+                    const allRelations = await relationsResponse.json();
+                    
+                    // Filter relations for this member
+                    const memberRelations = allRelations.filter(relation => 
+                        relation.individual1_id == memberId || relation.individual2_id == memberId
+                    );
+                    
+                    console.log('Member relations:', memberRelations);
+                    
+                    // Process each relation
+                    for (const relation of memberRelations) {
+                        const otherPersonId = relation.individual1_id == memberId ? 
+                            relation.individual2_id : relation.individual1_id;
+                            
+                        // Get the other person's details
+                        const personResponse = await fetch(`http://localhost/fikraa/api.php?table=individuals&id=${otherPersonId}`);
+                        const personData = await personResponse.json();
+                        
+                        if (Array.isArray(personData) && personData.length > 0) {
+                            const person = personData[0];
+                            const personInfo = {
+                                id: person.id,
+                                name: `${person.first_name} ${person.last_name}`,
+                                gender: person.gender
+                            };
+                            
+                            // Determine the relationship type
+                            if (relation.relationship === 'Father') {
+                                if (relation.individual1_id == otherPersonId) {
+                                    // Other person is the father
+                                    father = personInfo;
+                                } else {
+                                    // Member is the father, other person is child
+                                    children.push(personInfo);
+                                }
+                            }
+                        }
+                    }
+                } catch (relError) {
+                    console.error('Error fetching relationships:', relError);
+                }
+                
+                // Update modal with member data
+                modalBody.innerHTML = `
+                    <div class="member-header">
+                        <h2 id="member-name">${memberData.first_name} ${memberData.last_name}</h2>
+                        <div class="member-basic-info">
+                            <span id="member-gender" class="${memberData.gender}-badge">${memberData.gender.charAt(0).toUpperCase() + memberData.gender.slice(1)}</span>
+                            <span id="member-status" class="status-active">${memberData.status || 'Active'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="member-details">
+                        <h3>Family Information</h3>
+                        <div class="family-relations">
+                            <div class="relation">
+                                <strong>Father:</strong> 
+                                <span id="father-name">${father ? father.name : 'Not specified'}</span>
+                            </div>
+                            <div class="relation">
+                                <strong>Mother:</strong> 
+                                <span id="mother-name">${mother ? mother.name : 'Not specified'}</span>
+                            </div>
+                            <div class="relation">
+                                <strong>Spouse:</strong> 
+                                <span id="spouse-name">${spouse ? spouse.name : 'None'}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Children Section -->
+                        <div class="children-section">
+                            <h4>Children</h4>
+                            <div class="children-list">
+                                ${children.length > 0 ? 
+                                    children.map(child => 
+                                        `<div class="sibling-badge ${child.gender}">
+                                            <i class="fas fa-${child.gender}"></i>
+                                            <span>${child.name}</span>
+                                        </div>`
+                                    ).join('') : 
+                                    '<p>No children registered</p>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error viewing member:', error);
+                const modal = document.getElementById('view-member-modal');
+                modal.querySelector('.modal-body').innerHTML = `
+                    <div class="error-message" style="color: red; padding: 20px;">
+                        Error: ${error.message}
+                    </div>
+                `;
             }
-            
-            openModal('view-member');
+        }
+
+        // Helper function to fetch family relations for a member
+        async function fetchFamilyRelations(memberId) {
+            try {
+                // Fetch all family relations from API
+                const response = await fetch(`http://localhost/fikraa/api.php?table=family_relations`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch family relations');
+                }
+                
+                const allRelations = await response.json();
+                if (!Array.isArray(allRelations)) {
+                    return { father: null, mother: null, spouse: null, siblings: [], children: [] };
+                }
+                
+                console.log(`All relations:`, allRelations);
+                
+                // Filter relations for this member
+                const memberRelations = allRelations.filter(relation => 
+                    relation.individual1_id == memberId || relation.individual2_id == memberId
+                );
+                
+                console.log(`Relations for member ${memberId}:`, memberRelations);
+                
+                // Process relations to find family members
+                const familyRelations = { 
+                    father: null, 
+                    mother: null, 
+                    spouse: null, 
+                    siblings: [], 
+                    children: [] 
+                };
+                
+                // We need to get additional details for each relation
+                const relationPromises = memberRelations.map(async relation => {
+                    const isIndividual1 = relation.individual1_id == memberId;
+                    const otherId = isIndividual1 ? relation.individual2_id : relation.individual1_id;
+                    const relationshipType = relation.relationship;
+                    
+                    // Get details of the other person
+                    try {
+                        const personResponse = await fetch(`http://localhost/fikraa/api.php?table=individuals&id=${otherId}`);
+                        const personData = await personResponse.json();
+                        
+                        if (Array.isArray(personData) && personData.length > 0) {
+                            const person = personData[0];
+                            const personInfo = {
+                                id: person.id,
+                                name: `${person.first_name} ${person.last_name}`,
+                                gender: person.gender
+                            };
+                            
+                            // Determine relationship based on type and who is who
+                            if (relationshipType === 'Father' && !isIndividual1) {
+                                // The other person is the father
+                                familyRelations.father = personInfo;
+                            } else if (relationshipType === 'Father' && isIndividual1) {
+                                // The member is the father, so the other person is a child
+                                familyRelations.children.push(personInfo);
+                            } else if ((relationshipType === 'Son' || relationshipType === 'Daughter') && !isIndividual1) {
+                                // The member is the child, so the other person is the father
+                                familyRelations.father = personInfo;
+                            } else if ((relationshipType === 'Son' || relationshipType === 'Daughter') && isIndividual1) {
+                                // The member is a child, so the other person is a parent
+                                if (person.gender === 'male') {
+                                    familyRelations.father = personInfo;
+                                } else {
+                                    familyRelations.mother = personInfo;
+                                }
+                            } else if (relationshipType === 'Spouse') {
+                                // Spouse relationship
+                                familyRelations.spouse = personInfo;
+                            } else if (relationshipType === 'Sibling') {
+                                // Sibling relationship
+                                familyRelations.siblings.push(personInfo);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching person ${otherId}:`, error);
+                    }
+                });
+                
+                // Wait for all person details to be fetched
+                await Promise.all(relationPromises);
+                
+                return familyRelations;
+            } catch (error) {
+                console.error('Error fetching family relations:', error);
+                return { father: null, mother: null, spouse: null, siblings: [], children: [] };
+            }
+        }
+
+        // Helper function to capitalize the first letter of a string
+        function capitalizeFirst(str) {
+            if (!str) return '';
+            return str.charAt(0).toUpperCase() + str.slice(1);
         }
 
         // View switching functionality
@@ -1272,6 +1508,142 @@
                 console.error('Error during initial load:', error);
             });
 
+            // Add filter functionality
+            const applyFiltersBtn = document.getElementById('apply-filters');
+            const resetFiltersBtn = document.getElementById('reset-filters');
+            
+            if (applyFiltersBtn) {
+                applyFiltersBtn.addEventListener('click', function() {
+                    // Collect all filter values
+                    const filters = {};
+                    const activeFilters = [];
+                    
+                    console.log('Starting filter collection...');
+
+                    // Status filter (multiple select)
+                    const statusSelect = document.querySelector('.filter-grid select[multiple]');
+                    console.log('Status select element:', statusSelect);
+                    if (statusSelect) {
+                        const selectedOptions = statusSelect.selectedOptions;
+                        console.log('Selected options:', selectedOptions);
+                        const selectedStatuses = Array.from(selectedOptions).map(option => option.value);
+                        console.log('Mapped selected statuses:', selectedStatuses);
+                        if (selectedStatuses.length > 0) {
+                            filters.status = selectedStatuses;
+                            activeFilters.push(`Status: ${selectedStatuses.join(', ')}`);
+                        }
+                    }
+                    
+                    // Family name filter
+                    const familyNameInput = document.querySelector('.filter-grid input[placeholder="Enter last name"]');
+                    console.log('Family name input element:', familyNameInput);
+                    if (familyNameInput && familyNameInput.value.trim()) {
+                        filters.last_name = familyNameInput.value.trim();
+                        activeFilters.push(`Family Name: ${familyNameInput.value.trim()}`);
+                    }
+                    
+                    // Special status filter (multiple select)
+                    const specialStatusSelect = document.querySelectorAll('.filter-grid select[multiple]')[1];
+                    console.log('Special status select element:', specialStatusSelect);
+                    if (specialStatusSelect) {
+                        const selectedOptions = specialStatusSelect.selectedOptions;
+                        console.log('Selected special statuses options:', selectedOptions);
+                        const selectedSpecialStatuses = Array.from(selectedOptions).map(option => option.value);
+                        console.log('Mapped special statuses:', selectedSpecialStatuses);
+                        if (selectedSpecialStatuses.length > 0) {
+                            filters.special_status = selectedSpecialStatuses;
+                            activeFilters.push(`Special Status: ${selectedSpecialStatuses.join(', ')}`);
+                        }
+                    }
+                    
+                    // Date range filters
+                    const dateInputs = document.querySelectorAll('.date-range input[type="date"]');
+                    console.log('Date inputs:', dateInputs);
+                    if (dateInputs && dateInputs.length >= 2) {
+                        if (dateInputs[0].value) {
+                            filters.from_date = dateInputs[0].value;
+                            activeFilters.push(`From Date: ${dateInputs[0].value}`);
+                        }
+                        if (dateInputs[1].value) {
+                            filters.to_date = dateInputs[1].value;
+                            activeFilters.push(`To Date: ${dateInputs[1].value}`);
+                        }
+                    }
+                    
+                    // Search input
+                    const searchInput = document.querySelector('.filter-controls .search-bar input');
+                    console.log('Search input element:', searchInput);
+                    if (searchInput && searchInput.value.trim()) {
+                        filters.search = searchInput.value.trim();
+                        activeFilters.push(`Search: ${searchInput.value.trim()}`);
+                    }
+                    
+                    console.log('Final filters object:', filters);
+                    console.log('Active filters:', activeFilters);
+                    
+                    // Display active filters
+                    const activeFiltersDisplay = document.getElementById('active-filters-display');
+                    if (activeFiltersDisplay) {
+                        if (activeFilters.length > 0) {
+                            activeFiltersDisplay.innerHTML = activeFilters.map(filter => 
+                                `<div class="filter-tag">${filter} <i class="fas fa-times-circle"></i></div>`
+                            ).join('');
+                            activeFiltersDisplay.style.display = 'flex';
+                        } else {
+                            activeFiltersDisplay.style.display = 'none';
+                        }
+                    }
+                    
+                    // Update the table with the filters
+                    updateMembersTable(filters);
+                });
+            }
+            
+            if (resetFiltersBtn) {
+                resetFiltersBtn.addEventListener('click', function() {
+                    // Reset all filter inputs
+                    const filterInputs = document.querySelectorAll('.filter-grid input, .filter-grid select');
+                    filterInputs.forEach(input => {
+                        if (input.type === 'text' || input.type === 'date') {
+                            input.value = '';
+                        } else if (input.tagName === 'SELECT') {
+                            if (input.multiple) {
+                                const defaultOptions = input.querySelectorAll('option[selected]');
+                                Array.from(input.options).forEach(option => {
+                                    option.selected = Array.from(defaultOptions).includes(option);
+                                });
+                            } else {
+                                input.selectedIndex = 0;
+                            }
+                        }
+                    });
+                    
+                    // Reset search input
+                    const searchInput = document.querySelector('.filter-controls .search-bar input');
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    
+                    // Hide active filters display
+                    const activeFiltersDisplay = document.getElementById('active-filters-display');
+                    if (activeFiltersDisplay) {
+                        activeFiltersDisplay.innerHTML = '';
+                        activeFiltersDisplay.style.display = 'none';
+                    }
+                    
+                    // Update table without filters
+                    updateMembersTable();
+                });
+            }
+
+            // Add Member Form Submission
+            const saveMemberBtn = document.getElementById('save-member-btn');
+            if (saveMemberBtn) {
+                saveMemberBtn.addEventListener('click', async function() {
+                    await saveMember();
+                });
+            }
+
             // Tree view selector
             const treeViewOptions = document.querySelectorAll('.view-option');
             treeViewOptions.forEach(option => {
@@ -1283,6 +1655,322 @@
                 });
             });
         });
+
+        // Function to save a new member
+        async function saveMember() {
+            try {
+                // Get form data
+                const form = document.getElementById('member-form');
+                const formData = new FormData(form);
+                const memberData = {};
+                const fatherData = {};
+                let fatherId = null;
+                let hasEnteredFatherData = false;
+                
+                // Debug form data
+                console.log('Form data entries:');
+                for (const [key, value] of formData.entries()) {
+                    console.log(`${key}: ${value}`);
+                    
+                    // Collect father data separately
+                    if (key.startsWith('father_') && value.trim() !== '') {
+                        if (key === 'father_last_name') {
+                            fatherData.last_name = value.trim();
+                            hasEnteredFatherData = true;
+                        } else if (key === 'father_birth_date') {
+                            fatherData.birth_date = value.trim();
+                        }
+                    } else if (value !== '') {  // Only include non-empty values for main member
+                        memberData[key] = value;
+                    }
+                }
+                
+                // Check marital status specifically
+                const maritalStatus = document.getElementById('marital_status').value;
+                console.log('Marital status element value:', maritalStatus);
+                
+                // Set default status if not selected
+                if (!memberData.status) {
+                    memberData.status = 'active';
+                }
+                
+                // Make sure marital status is included
+                if (maritalStatus && !memberData.marital_status) {
+                    memberData.marital_status = maritalStatus;
+                }
+                
+                console.log('Saving member with data:', memberData);
+                
+                // Show loading state
+                const saveBtn = document.getElementById('save-member-btn');
+                const originalText = saveBtn.textContent;
+                saveBtn.textContent = 'Saving...';
+                saveBtn.disabled = true;
+                
+                // Clear previous messages
+                const messageDiv = document.getElementById('form-message');
+                messageDiv.style.display = 'none';
+                messageDiv.textContent = '';
+                messageDiv.className = '';
+                
+                let newMemberId = null;
+
+                // First check if we should process father data
+                if (hasEnteredFatherData || formData.get('selected_father_id') || document.getElementById('father_search_first').value.trim()) {
+                    console.log('Processing father data');
+                    
+                    // Check if a father was selected from search
+                    const selectedFatherId = formData.get('selected_father_id');
+                    if (selectedFatherId) {
+                        console.log('Using selected father with ID:', selectedFatherId);
+                        fatherId = selectedFatherId;
+                    } else {
+                        // Get the data from the search fields
+                        const fatherFirstName = document.getElementById('father_search_first').value.trim();
+                        
+                        // Only proceed if father first name was provided
+                        if (fatherFirstName) {
+                            fatherData.first_name = fatherFirstName;
+                            fatherData.last_name = memberData.last_name; // Use member's last name for father
+                            fatherData.birth_date = document.getElementById('father_search_dob').value || '';
+                            
+                            console.log('Creating/finding father from form data:', fatherData);
+                            
+                            // Set default values for father
+                            fatherData.gender = 'male';
+                            fatherData.status = 'active';
+                            fatherData.marital_status = 'married';  // Default to married
+                            
+                            try {
+                                // First check if father exists by searching for name
+                                let fatherSearchUrl = `http://localhost/fikraa/api.php?table=individuals&search=${encodeURIComponent(fatherData.first_name)}`;
+                                
+                                console.log('Searching for father with URL:', fatherSearchUrl);
+                                const fatherSearchResponse = await fetch(fatherSearchUrl);
+                                const fatherSearchResults = await fatherSearchResponse.json();
+                                console.log('Father search results:', fatherSearchResults);
+                                
+                                let fatherExists = false;
+                                
+                                // Check if we found any potential father matches
+                                if (Array.isArray(fatherSearchResults) && fatherSearchResults.length > 0) {
+                                    // Look for father with matching first name, same last name as member, and matching birth date if provided
+                                    const exactMatch = fatherSearchResults.find(person => {
+                                        const nameMatch = person.first_name.toLowerCase() === fatherData.first_name.toLowerCase() && 
+                                                          person.last_name.toLowerCase() === fatherData.last_name.toLowerCase();
+                                        
+                                        // If we have birth date, check that too
+                                        if (fatherData.birth_date && person.birth_date) {
+                                            return nameMatch && person.birth_date === fatherData.birth_date;
+                                        }
+                                        return nameMatch;
+                                    });
+                                    
+                                    if (exactMatch) {
+                                        fatherId = exactMatch.id;
+                                        fatherExists = true;
+                                        console.log('Found existing father with ID:', fatherId);
+                                    }
+                                }
+                                
+                                // If father doesn't exist, create him
+                                if (!fatherExists) {
+                                    console.log('Father not found, creating new father record:', fatherData);
+                                    const createFatherResponse = await fetch('http://localhost/fikraa/api.php?table=individuals', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify(fatherData)
+                                    });
+                                    
+                                    // Get text response first to debug
+                                    const responseText = await createFatherResponse.text();
+                                    console.log('Raw father creation response:', responseText);
+                                    
+                                    // Then parse it
+                                    let fatherResponseData;
+                                    try {
+                                        fatherResponseData = JSON.parse(responseText);
+                                    } catch (parseError) {
+                                        console.error('Failed to parse father creation response:', parseError);
+                                        throw new Error('Invalid response from server when creating father record');
+                                    }
+                                    
+                                    console.log('Parsed father creation response:', fatherResponseData);
+                                    
+                                    if (fatherResponseData.status === 'success') {
+                                        fatherId = fatherResponseData.id;
+                                        console.log('Created new father with ID:', fatherId);
+                                    } else {
+                                        console.error('Failed to create father:', fatherResponseData);
+                                        throw new Error('Failed to create father record: ' + (fatherResponseData.message || 'Unknown error'));
+                                    }
+                                }
+                            } catch (fatherError) {
+                                console.error('Error processing father:', fatherError);
+                                // Continue with member creation even if father processing failed
+                            }
+                        }
+                    }
+                }
+                
+                // Now create the member
+                console.log('Creating member with data:', memberData);
+                const response = await fetch('http://localhost/fikraa/api.php?table=individuals', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(memberData)
+                });
+                
+                // Get text response first to debug
+                const responseText = await response.text();
+                console.log('Raw member creation response:', responseText);
+                
+                // Then parse it
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('Failed to parse member creation response:', parseError);
+                    throw new Error('Invalid response from server when creating member');
+                }
+                
+                console.log('Parsed member creation response:', responseData);
+                
+                if (responseData.status === 'success') {
+                    newMemberId = responseData.id;
+                    console.log('Created new member with ID:', newMemberId);
+                    
+                    // Create family relationship between child and father if both exist
+                    if (fatherId && newMemberId) {
+                        try {
+                            console.log('Creating father-child relationship between father ID:', fatherId, 'and child ID:', newMemberId);
+                            
+                            // Ensure these are treated as numbers if possible
+                            const fatherIdNum = parseInt(fatherId, 10);
+                            const memberIdNum = parseInt(newMemberId, 10);
+                            
+                            const relationshipData = {
+                                individual1_id: fatherIdNum,
+                                individual2_id: memberIdNum,
+                                relationship: 'Father'
+                            };
+                            
+                            console.log('Relationship data:', relationshipData);
+                            
+                            // Verify the data is valid before sending
+                            if (isNaN(fatherIdNum) || isNaN(memberIdNum)) {
+                                console.error('Invalid IDs for relationship:', { fatherId, newMemberId });
+                                throw new Error('Invalid IDs for relationship');
+                            }
+                            
+                            const relationshipResponse = await fetch('http://localhost/fikraa/api.php?table=family_relations', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(relationshipData)
+                            });
+                            
+                            // Get text response for debugging
+                            const relationshipResponseText = await relationshipResponse.text();
+                            console.log('Raw relationship creation response:', relationshipResponseText);
+                            
+                            try {
+                                const relationshipResponseData = JSON.parse(relationshipResponseText);
+                                console.log('Parsed relationship creation response:', relationshipResponseData);
+                                
+                                if (relationshipResponseData.status === 'success') {
+                                    console.log('Successfully created father-child relationship');
+                                } else {
+                                    console.error('Failed to create relationship:', relationshipResponseData);
+                                    // Try with swapped IDs as a fallback
+                                    console.log('Trying with swapped IDs as fallback...');
+                                    
+                                    const fallbackRelationshipData = {
+                                        individual1_id: memberIdNum,
+                                        individual2_id: fatherIdNum,
+                                        relationship: 'Father'
+                                    };
+                                    
+                                    const fallbackResponse = await fetch('http://localhost/fikraa/api.php?table=family_relations', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify(fallbackRelationshipData)
+                                    });
+                                    
+                                    const fallbackResponseText = await fallbackResponse.text();
+                                    console.log('Fallback relationship response:', fallbackResponseText);
+                                }
+                            } catch (parseError) {
+                                console.error('Failed to parse relationship response:', parseError);
+                            }
+                        } catch (relationError) {
+                            console.error('Error creating relationship:', relationError);
+                        }
+                    } else {
+                        console.log('Unable to create father-child relationship: missing IDs', { fatherId, newMemberId });
+                    }
+                    
+                    // Show success message
+                    messageDiv.textContent = 'Member added successfully!';
+                    messageDiv.style.backgroundColor = '#d4edda';
+                    messageDiv.style.color = '#155724';
+                    messageDiv.style.display = 'block';
+                    
+                    // Clear form after successful submission
+                    form.reset();
+                    
+                    // Refresh the members table after short delay
+                    setTimeout(() => {
+                        updateMembersTable();
+                        closeModal('add-member');
+                    }, 1500);
+                } else {
+                    // Show error message with details
+                    let errorMessage = responseData.message || 'Failed to add member. Please try again.';
+                    
+                    // Add details if available
+                    if (responseData.details) {
+                        errorMessage += `\nDetails: ${responseData.details}`;
+                        console.error('Error details:', responseData.details);
+                    }
+                    
+                    messageDiv.textContent = errorMessage;
+                    messageDiv.style.backgroundColor = '#f8d7da';
+                    messageDiv.style.color = '#721c24';
+                    messageDiv.style.display = 'block';
+                    
+                    // Log the full response for debugging
+                    console.error('Full error response:', responseData);
+                }
+                
+                // Reset button state
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = false;
+                
+            } catch (error) {
+                console.error('Error saving member:', error);
+                
+                // Show error message
+                const messageDiv = document.getElementById('form-message');
+                messageDiv.textContent = 'An error occurred while saving: ' + error.message;
+                messageDiv.style.backgroundColor = '#f8d7da';
+                messageDiv.style.color = '#721c24';
+                messageDiv.style.display = 'block';
+                
+                // Reset button state
+                const saveBtn = document.getElementById('save-member-btn');
+                saveBtn.textContent = 'Save Member';
+                saveBtn.disabled = false;
+            }
+        }
+
         // Add this function to fetch statistics from your API
         async function fetchStatistics(filters = {}) {
             try {
@@ -1446,31 +2134,41 @@
             }
         }
 
-        // Add event listeners for filters
-        document.addEventListener('DOMContentLoaded', function() {
-            // ... your existing DOMContentLoaded code ...
-
-            // Add filter event listeners
-            document.getElementById('apply-filters').addEventListener('click', async function() {
-                const filters = {
-                    ageGroup: document.getElementById('age-filter').value,
-                    occupation: document.getElementById('occupation-filter').value
-                };
-                await renderCharts(filters);
-            });
-
-            document.getElementById('reset-filters').addEventListener('click', async function() {
-                document.getElementById('age-filter').value = 'all';
-                document.getElementById('occupation-filter').value = 'all';
-                await renderCharts();
-            });
-        });
-
         // Add this function to fetch members from your API
-        async function fetchMembers() {
+        async function fetchMembers(filters = {}) {
             try {
-                console.log('Fetching members...');
-                const response = await fetch('http://localhost/fikraa/api.php?table=individuals');
+                console.log('Fetching members with filters:', filters);
+                let url = 'http://localhost/fikraa/api.php?table=individuals';
+                
+                // Add filters to URL if provided
+                if (Object.keys(filters).length > 0) {
+                    const queryParams = new URLSearchParams();
+                    
+                    // Add each filter to query params
+                    Object.keys(filters).forEach(key => {
+                        if (Array.isArray(filters[key])) {
+                            filters[key].forEach(value => {
+                                queryParams.append(`${key}[]`, value);
+                            });
+                        } else if (filters[key]) {
+                            queryParams.append(key, filters[key]);
+                        }
+                    });
+                    
+                    // Append query string to URL
+                    const queryString = queryParams.toString();
+                    if (queryString) {
+                        url += `&${queryString}`;
+                    }
+                }
+                
+                console.log('Fetching from URL:', url);
+                
+                // Add a timestamp to prevent caching
+                const noCache = new Date().getTime();
+                url += (url.includes('?') ? '&' : '?') + '_nocache=' + noCache;
+                
+                const response = await fetch(url);
                 console.log('Response status:', response.status);
                 
                 if (!response.ok) {
@@ -1479,7 +2177,19 @@
                     throw new Error(`Failed to fetch members: ${response.status} ${response.statusText}`);
                 }
                 
-                const data = await response.json();
+                // Get raw response text for debugging
+                const responseText = await response.text();
+                console.log('Raw response text:', responseText);
+                
+                // Try to parse JSON
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                    throw new Error('Invalid JSON response from server');
+                }
+                
                 console.log('Received data:', data);
                 
                 if (data.status === 'error') {
@@ -1488,6 +2198,10 @@
                 
                 if (!Array.isArray(data)) {
                     console.error('Unexpected data format:', data);
+                    // Check if we got a wrapped response
+                    if (data && data.data && Array.isArray(data.data)) {
+                        return data.data;
+                    }
                     throw new Error('Invalid data format received from server');
                 }
                 
@@ -1499,17 +2213,30 @@
         }
 
         // Function to update the members table
-        async function updateMembersTable() {
+        async function updateMembersTable(filters = {}) {
             try {
-                const members = await fetchMembers();
-                console.log('Updating table with members:', members);
+                // Show loading indicator
+                const loadingIndicator = document.getElementById('loading-indicator');
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'block';
+                }
                 
                 const tableBody = document.querySelector('.data-table tbody');
                 if (!tableBody) {
                     throw new Error('Table body element not found');
                 }
                 
-                tableBody.innerHTML = ''; // Clear existing rows
+                // Fetch members with filters
+                const members = await fetchMembers(filters);
+                console.log('Updating table with members:', members);
+                
+                // Clear existing rows
+                tableBody.innerHTML = '';
+                
+                // Hide loading indicator
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
 
                 if (members.length === 0) {
                     const row = document.createElement('tr');
@@ -1532,13 +2259,20 @@
                         <td>
                             <button class="action-btn view-btn" onclick="viewMember('${member.id}')">View</button>
                             <button class="action-btn edit-btn">Edit</button>
-                            <button class="action-btn delete-btn">Delete</button>
+                            <button class="action-btn delete-btn" onclick="deleteMember(${member.id})">Delete</button>
                         </td>
                     `;
                     tableBody.appendChild(row);
                 });
             } catch (error) {
                 console.error('Error updating members table:', error);
+                
+                // Hide loading indicator
+                const loadingIndicator = document.getElementById('loading-indicator');
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
+                
                 const tableBody = document.querySelector('.data-table tbody');
                 if (tableBody) {
                     tableBody.innerHTML = `
@@ -1986,6 +2720,398 @@
                 });
             });
         });
+
+        // Function to check database tables
+        async function checkDatabaseTables() {
+            try {
+                console.log('Checking database tables...');
+                
+                // Show a temporary message
+                const loadingDiv = document.createElement('div');
+                loadingDiv.id = 'db-check-message';
+                loadingDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000;';
+                loadingDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking database structure...';
+                document.body.appendChild(loadingDiv);
+                
+                const response = await fetch('http://localhost/fikraa/api.php?table=check_tables');
+                if (!response.ok) {
+                    throw new Error(`Failed to check tables: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Database check result:', data);
+                
+                // Update the message with results
+                if (data.status === 'success') {
+                    let allTablesExist = true;
+                    let problemTables = [];
+                    
+                    // Check if all tables exist
+                    Object.keys(data.tables).forEach(tableName => {
+                        if (tableName !== 'database_info') {
+                            if (!data.tables[tableName].exists) {
+                                allTablesExist = false;
+                                problemTables.push(`Table "${tableName}" does not exist. To create it:
+                                <pre>CREATE TABLE ${tableName} (...)</pre>`);
+                            } else {
+                                // Check for expected columns
+                                const expectedColumns = {
+                                    'individuals': ['id', 'first_name', 'last_name', 'gender', 'birth_date', 'status', 'marital_status', 'phone', 'address'],
+                                    'family_relations': ['id', 'individual1_id', 'individual2_id', 'relationship'],
+                                    'social_status_info': ['id', 'individual_id', 'occupation'],
+                                    'additional_social_status': ['id', 'individual_id', 'status']
+                                };
+                                
+                                if (expectedColumns[tableName]) {
+                                    const missingColumns = expectedColumns[tableName].filter(col => 
+                                        !data.tables[tableName].columns.includes(col)
+                                    );
+                                    
+                                    if (missingColumns.length > 0) {
+                                        problemTables.push(`Table "${tableName}" is missing columns: ${missingColumns.join(', ')}.<br>
+                                        Fix with: <pre>ALTER TABLE ${tableName} ADD COLUMN ${missingColumns[0]} VARCHAR(255)</pre>`);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    if (allTablesExist && problemTables.length === 0) {
+                        loadingDiv.innerHTML = '<i class="fas fa-check-circle" style="color: green;"></i> All database tables exist <button onclick="this.parentNode.remove()" style="margin-left: 10px; border: none; background: #f0f0f0; padding: 5px; border-radius: 3px; cursor: pointer;">Dismiss</button>';
+                        
+                        // Show detailed structure in console
+                        console.table(data.tables);
+                    } else {
+                        loadingDiv.innerHTML = `<i class="fas fa-exclamation-triangle" style="color: orange;"></i> Database issues found:<br>${problemTables.join('<br>')} <button onclick="this.parentNode.remove()" style="margin-left: 10px; border: none; background: #f0f0f0; padding: 5px; border-radius: 3px; cursor: pointer;">Dismiss</button>`;
+                    }
+                } else {
+                    loadingDiv.innerHTML = `<i class="fas fa-times-circle" style="color: red;"></i> Error: ${data.message} <button onclick="this.parentNode.remove()" style="margin-left: 10px; border: none; background: #f0f0f0; padding: 5px; border-radius: 3px; cursor: pointer;">Dismiss</button>`;
+                }
+                
+            } catch (error) {
+                console.error('Error checking database:', error);
+                
+                // Show error message
+                const loadingDiv = document.getElementById('db-check-message') || document.createElement('div');
+                loadingDiv.id = 'db-check-message';
+                loadingDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000;';
+                loadingDiv.innerHTML = `<i class="fas fa-times-circle" style="color: red;"></i> Error: ${error.message} <button onclick="this.parentNode.remove()" style="margin-left: 10px; border: none; background: #f0f0f0; padding: 5px; border-radius: 3px; cursor: pointer;">Dismiss</button>`;
+                
+                if (!document.getElementById('db-check-message')) {
+                    document.body.appendChild(loadingDiv);
+                }
+            }
+        }
+
+        // Function to delete a member
+        async function deleteMember(memberId) {
+            // Show confirmation dialog
+            if (!confirm('Are you sure you want to delete this member? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                console.log('Deleting member with ID:', memberId);
+                
+                // Show loading state
+                const loadingDiv = document.createElement('div');
+                loadingDiv.id = 'delete-loading';
+                loadingDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000;';
+                loadingDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting member...';
+                document.body.appendChild(loadingDiv);
+                
+                // Make API request to delete the member
+                const response = await fetch(`http://localhost/fikraa/api.php?table=individuals&id=${memberId}`, {
+                    method: 'DELETE'
+                });
+                
+                // First get the response text
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+                
+                // Remove the loading indicator
+                document.body.removeChild(loadingDiv);
+                
+                // Parse the response text if not empty
+                let data;
+                if (responseText.trim()) {
+                    try {
+                        data = JSON.parse(responseText);
+                        console.log('Delete response:', data);
+                    } catch (parseError) {
+                        console.error('Failed to parse JSON response:', responseText);
+                        // If API call succeeded but returned invalid JSON, assume success
+                        data = { status: 'success' };
+                    }
+                } else {
+                    // If response is empty but status is OK, consider it a success
+                    data = { status: response.ok ? 'success' : 'error' };
+                }
+                
+                if (data.status === 'success') {
+                    // Show success message
+                    const successDiv = document.createElement('div');
+                    successDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000;';
+                    successDiv.innerHTML = 'Member deleted successfully!';
+                    document.body.appendChild(successDiv);
+                    
+                    // Remove the message after a delay
+                    setTimeout(() => {
+                        document.body.removeChild(successDiv);
+                    }, 3000);
+                    
+                    // Refresh the members table
+                    updateMembersTable();
+                } else {
+                    // Show error message
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000;';
+                    errorDiv.innerHTML = 'Failed to delete member: ' + (data.message || 'Unknown error');
+                    document.body.appendChild(errorDiv);
+                    
+                    // Remove the message after a delay
+                    setTimeout(() => {
+                        document.body.removeChild(errorDiv);
+                    }, 5000);
+                }
+            } catch (error) {
+                console.error('Error deleting member:', error);
+                
+                // Remove loading indicator if it exists
+                const loadingDiv = document.getElementById('delete-loading');
+                if (loadingDiv) {
+                    document.body.removeChild(loadingDiv);
+                }
+                
+                // Show error message
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000;';
+                errorDiv.innerHTML = 'Error deleting member: ' + error.message;
+                document.body.appendChild(errorDiv);
+                
+                // Remove the message after a delay
+                setTimeout(() => {
+                    document.body.removeChild(errorDiv);
+                }, 5000);
+            }
+        }
+
+        // Initialize event listeners after DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // ... existing code ...
+            
+            // Setup father search functionality
+            const searchFatherBtn = document.getElementById('search_father_btn');
+            if (searchFatherBtn) {
+                searchFatherBtn.addEventListener('click', searchFather);
+            }
+            
+            // Setup clear father selection button
+            const clearFatherBtn = document.getElementById('clear_father_btn');
+            if (clearFatherBtn) {
+                clearFatherBtn.addEventListener('click', () => {
+                    // Clear selection
+                    document.getElementById('selected-father').style.display = 'none';
+                    document.getElementById('selected_father_id').value = '';
+                    
+                    // Clear search fields
+                    document.getElementById('father_search_first').value = '';
+                    document.getElementById('father_search_dob').value = '';
+                });
+            }
+        });
+
+        // Father search function
+        async function searchFather() {
+            const firstName = document.getElementById('father_search_first').value.trim();
+            const birthDate = document.getElementById('father_search_dob').value;
+            
+            // Validate at least one search field is filled
+            if (!firstName && !birthDate) {
+                alert('Please enter at least the father\'s first name or birth date');
+                return;
+            }
+            
+            try {
+                // Show loading state
+                const resultsDiv = document.getElementById('father-search-results');
+                const matchesDiv = document.getElementById('father-matches');
+                
+                resultsDiv.style.display = 'block';
+                matchesDiv.innerHTML = '<div style="text-align: center;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+                
+                // Fix the URL format - using proper parameter format (? for first param, & for subsequent ones)
+                let searchUrl = `http://localhost/fikraa/api.php?table=individuals`;
+                if (firstName) {
+                    searchUrl += `&search=${encodeURIComponent(firstName)}`;
+                }
+                
+                console.log('Searching with URL:', searchUrl);
+                const response = await fetch(searchUrl);
+                
+                // Check if response is ok
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                
+                // Get response text first for debugging
+                const responseText = await response.text();
+                console.log('Raw search response:', responseText);
+                
+                // Parse the response
+                let results;
+                try {
+                    results = JSON.parse(responseText);
+                } catch (e) {
+                    console.error('Failed to parse search results:', e);
+                    throw new Error('Invalid response from server');
+                }
+                
+                console.log('Parsed search results:', results);
+                
+                // Check if results is array and has items
+                if (!Array.isArray(results)) {
+                    console.error('Expected array of results but got:', typeof results);
+                    results = [];
+                }
+                
+                // Filter for male members only (potential fathers)
+                // Also filter by birth date if provided
+                const potentialFathers = results.filter(person => {
+                    // Debug each person being filtered
+                    console.log('Evaluating person:', person);
+                    
+                    // First check if gender exists and is male
+                    if (!person.gender || person.gender.toLowerCase() !== 'male') {
+                        console.log('Filtered out: not male');
+                        return false;
+                    }
+                    
+                    // If birth date was provided, check for a match
+                    if (birthDate && person.birth_date) {
+                        const matches = person.birth_date === birthDate;
+                        console.log('Birth date comparison:', { provided: birthDate, person: person.birth_date, matches });
+                        return matches;
+                    }
+                    
+                    console.log('Kept: male with matching criteria');
+                    return true;
+                });
+                
+                console.log('Filtered potential fathers:', potentialFathers);
+                
+                // Display results
+                if (potentialFathers.length === 0) {
+                    matchesDiv.innerHTML = `
+                        <p>No matching fathers found</p>
+                        <button class="action-btn view-btn create-father-btn">Create New Father</button>
+                    `;
+                    
+                    // Add event listener for the create button
+                    const createBtn = matchesDiv.querySelector('.create-father-btn');
+                    createBtn.addEventListener('click', () => {
+                        // Hide results and show the "selected" area with note about new record
+                        resultsDiv.style.display = 'none';
+                        const selectedFatherDiv = document.getElementById('selected-father');
+                        const infoDiv = selectedFatherDiv.querySelector('.person-info');
+                        
+                        infoDiv.innerHTML = `
+                            <div class="person-name">${firstName}</div>
+                            <div class="person-details">
+                                <span>Birth: ${birthDate || 'Not specified'}</span>
+                                <span><strong>Note: Will create new father record</strong></span>
+                            </div>
+                        `;
+                        
+                        // Clear the selected father ID to indicate a new record
+                        document.getElementById('selected_father_id').value = '';
+                        selectedFatherDiv.style.display = 'block';
+                    });
+                } else {
+                    matchesDiv.innerHTML = '';
+                    
+                    potentialFathers.forEach(father => {
+                        const personDiv = document.createElement('div');
+                        personDiv.className = 'person-result';
+                        personDiv.innerHTML = `
+                            <div class="person-name">${father.first_name} ${father.last_name}</div>
+                            <div class="person-details">
+                                <span>Birth: ${father.birth_date || 'Unknown'}</span>
+                                <span>Status: ${father.marital_status || 'Unknown'}</span>
+                            </div>
+                            <button class="select-person-btn" data-id="${father.id}">Select</button>
+                        `;
+                        matchesDiv.appendChild(personDiv);
+                        
+                        // Add event listener to select button
+                        const selectBtn = personDiv.querySelector('.select-person-btn');
+                        selectBtn.addEventListener('click', () => selectFather(father));
+                    });
+                    
+                    // Add an option to create a new father even if matches found
+                    const createOption = document.createElement('div');
+                    createOption.className = 'create-new-option';
+                    createOption.innerHTML = `
+                        <hr>
+                        <p>Or create new father record:</p>
+                        <button class="action-btn view-btn create-father-btn">Create New Father</button>
+                    `;
+                    matchesDiv.appendChild(createOption);
+                    
+                    // Add event listener for the create button
+                    const createBtn = createOption.querySelector('.create-father-btn');
+                    createBtn.addEventListener('click', () => {
+                        // Hide results and show the "selected" area with note about new record
+                        resultsDiv.style.display = 'none';
+                        const selectedFatherDiv = document.getElementById('selected-father');
+                        const infoDiv = selectedFatherDiv.querySelector('.person-info');
+                        
+                        infoDiv.innerHTML = `
+                            <div class="person-name">${firstName}</div>
+                            <div class="person-details">
+                                <span>Birth: ${birthDate || 'Not specified'}</span>
+                                <span><strong>Note: Will create new father record</strong></span>
+                            </div>
+                        `;
+                        
+                        // Clear the selected father ID to indicate a new record
+                        document.getElementById('selected_father_id').value = '';
+                        selectedFatherDiv.style.display = 'block';
+                    });
+                }
+            } catch (error) {
+                console.error('Error searching for father:', error);
+                document.getElementById('father-matches').innerHTML = `<p>Error searching for father: ${error.message}. Please try again.</p>`;
+            }
+        }
+
+        // Function to select a father from search results
+        function selectFather(fatherData) {
+            // Display selected father
+            const selectedFatherDiv = document.getElementById('selected-father');
+            const infoDiv = selectedFatherDiv.querySelector('.person-info');
+            
+            infoDiv.innerHTML = `
+                <div class="person-name">${fatherData.first_name} ${fatherData.last_name}</div>
+                <div class="person-details">
+                    <span>Birth: ${fatherData.birth_date || 'Unknown'}</span>
+                    <span>Status: ${fatherData.marital_status || 'Unknown'}</span>
+                </div>
+            `;
+            
+            // Store the selected father ID
+            document.getElementById('selected_father_id').value = fatherData.id;
+            
+            // Show the selected father section
+            selectedFatherDiv.style.display = 'block';
+            
+            // Hide search results
+            document.getElementById('father-search-results').style.display = 'none';
+            
+            // Clear search form
+            document.getElementById('father_search_first').value = '';
+            document.getElementById('father_search_dob').value = '';
+        }
     </script>
 </body>
 </html>
