@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Relations Test</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        input[type="text"] {
+            padding: 8px;
+            width: 200px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            overflow: auto;
+            max-height: 500px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .loading {
+            display: none;
+            margin: 20px 0;
+            color: #3498db;
+        }
+        #tree-container {
+            width: 100%;
+            height: 600px;
+            overflow: auto;
+            border: 1px solid #ddd;
+            margin-top: 20px;
+        }
+        .node {
+            cursor: pointer;
+        }
+        .node circle {
+            fill: #fff;
+            stroke: steelblue;
+            stroke-width: 3px;
+        }
+        .node.male circle {
+            fill: #3498db;
+        }
+        .node.female circle {
+            fill: #e74c3c;
+        }
+        .node text {
+            font: 12px sans-serif;
+        }
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 15px;
+            background-color: #f2f2f2;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Family Relations Test</h1>
+        
+        <div class="form-group">
+            <label for="family-name">Family Name (Last Name):</label>
+            <input type="text" id="family-name" placeholder="Enter family name (optional)">
+            <button id="search-button">Get All Relations</button>
+            <button id="search-family-button">Get Family Relations</button>
+            <button id="get-individuals-button">Get All Individuals</button>
+            <button id="build-tree-button">Build Family Tree</button>
+        </div>
+        
+        <div id="loading" class="loading">Loading data...</div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="relations">Relations Data</div>
+            <div class="tab" data-tab="tree">Family Tree</div>
+        </div>
+        
+        <div id="relations-tab" class="tab-content active">
+            <div id="result" class="result" style="display: none;">
+                <h2>API Response:</h2>
+                <div id="response-content"></div>
+            </div>
+        </div>
+        
+        <div id="tree-tab" class="tab-content">
+            <div id="tree-container"></div>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchButton = document.getElementById('search-button');
+            const searchFamilyButton = document.getElementById('search-family-button');
+            const getIndividualsButton = document.getElementById('get-individuals-button');
+            const buildTreeButton = document.getElementById('build-tree-button');
+            const familyNameInput = document.getElementById('family-name');
+            const resultDiv = document.getElementById('result');
+            const responseContent = document.getElementById('response-content');
+            const errorDiv = document.getElementById('error');
+            const loadingDiv = document.getElementById('loading');
+            const treeContainer = document.getElementById('tree-container');
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Update active content
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === `${tabId}-tab`) {
+                            content.classList.add('active');
+                        }
+                    });
+                });
+            });
+            
+            // Function to fetch all individuals
+            async function fetchIndividuals() {
+                try {
+                    // Show loading state
+                    loadingDiv.style.display = 'block';
+                    resultDiv.style.display = 'none';
+                    errorDiv.style.display = 'none';
+                    
+                    // Use absolute URL to ensure proper path resolution
+                    const apiUrl = window.location.href.replace(/\/[^\/]*$/, '') + '/api.php';
+                    console.log('API URL:', apiUrl);
+                    
+                    // Build the URL with parameters
+                    const url = `${apiUrl}?table=individuals`;
+                    
+                    console.log('Request URL:', url);
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    console.log('Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Error response:', errorText);
+                        throw new Error(`Failed to fetch individuals: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Received data:', data);
+                    
+                    // Create a list of individuals with first and last names
+                    const individualsList = data.map(individual => ({
+                        id: individual.id,
+                        name: `${individual.first_name} ${individual.last_name}`,
+                        gender: individual.gender
+                    }));
+                    
+                    // Print the list to the console
+                    console.log('Individuals List:');
+                    individualsList.forEach(individual => {
+                        console.log(`${individual.id}: ${individual.name} (${individual.gender})`);
+                    });
+                    
+                    // Display success message
+                    resultDiv.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                    responseContent.innerHTML = `<p class="success">Successfully retrieved ${individualsList.length} individuals. Check the console for the list.</p>`;
+                    
+                    // Store the individuals list for later use
+                    window.individualsList = individualsList;
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    showError(error.message);
+                } finally {
+                    loadingDiv.style.display = 'none';
+                }
+            }
+            
+            // Function to fetch family relations
+            async function fetchFamilyRelations(familyName = '') {
+                try {
+                    // Show loading state
+                    loadingDiv.style.display = 'block';
+                    resultDiv.style.display = 'none';
+                    errorDiv.style.display = 'none';
+                    
+                    // Use absolute URL to ensure proper path resolution
+                    const apiUrl = window.location.href.replace(/\/[^\/]*$/, '') + '/api.php';
+                    console.log('API URL:', apiUrl);
+                    
+                    // Build the URL with parameters
+                    let url = `${apiUrl}?table=family_relations`;
+                    if (familyName) {
+                        url += `&family=${encodeURIComponent(familyName)}`;
+                    }
+                    
+                    console.log('Request URL:', url);
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    console.log('Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Error response:', errorText);
+                        throw new Error(`Failed to fetch family relations: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Received data:', data);
+                    
+                    // Display the result
+                    resultDiv.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                    
+                    if (data.status === 'error') {
+                        responseContent.innerHTML = `<p class="error">Error: ${data.message}</p>`;
+                    } else {
+                        // Format the data for display
+                        let html = `<h3>Family Relations (${data.count} found):</h3>`;
+                        
+                        if (data.count > 0) {
+                            // Create a table to display the relations
+                            html += `
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Individual1_id</th>
+                                            <th>Individual2_id</th>
+                                            <th>Relationship</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                            `;
+                            
+                            data.data.forEach(relation => {
+                                html += `
+                                    <tr>
+                                        <td>${relation.id}</td>
+                                        <td>${relation.individual1_id}</td>
+                                        <td>${relation.individual2_id}</td>
+                                        <td>${relation.relationship}</td>
+                                    </tr>
+                                `;
+                            });
+                            
+                            html += `
+                                    </tbody>
+                                </table>
+                            `;
+                        } else {
+                            html += '<p>No family relations found.</p>';
+                        }
+                        
+                        // Also show the raw data
+                        html += '<h3>Raw Data:</h3>';
+                        html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                        
+                        responseContent.innerHTML = html;
+                        
+                        // Store the relations data for later use
+                        window.relationsData = data.data;
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showError(error.message);
+                } finally {
+                    loadingDiv.style.display = 'none';
+                }
+            }
+            
+            // Function to build and visualize the family tree
+            async function buildFamilyTree() {
+                try {
+                    // Show loading state
+                    loadingDiv.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                    
+                    // Check if we have individuals and relations data
+                    if (!window.individualsList || !window.relationsData) {
+                        // Fetch both if not available
+                        await Promise.all([
+                            fetchIndividuals(),
+                            fetchFamilyRelations()
+                        ]);
+                    }
+                    
+                    // Get the data
+                    const individuals = window.individualsList;
+                    const relations = window.relationsData;
+                    if (!individuals || individuals.length === 0) {
+                        throw new Error('No individuals found in the database');
+                    }
+                    
+                    if (!relations || relations.length === 0) {
+                        throw new Error('No family relations found in the database');
+                    }
+                    
+                    console.log('Building family tree with:', individuals.length, 'individuals and', relations.length, 'relations');
+                    
+                    // Create a map of individuals for easier lookup
+                    const individualsMap = {};
+                    individuals.forEach(individual => {
+                        individualsMap[individual.id] = individual;
+                    });
+                    
+                    // Create a map of relations for each individual
+                    const relationsMap = {};
+                    individuals.forEach(individual => {
+                        relationsMap[individual.id] = [];
+                    });
+                    
+                    // Populate the relations map
+                    relations.forEach(relation => {
+                        const individual1Id = relation.individual1_id;
+                        const individual2Id = relation.individual2_id;
+                        const relationship = relation.relationship;
+                        
+                        if (relationsMap[individual1Id]) {
+                            relationsMap[individual1Id].push({
+                                relatedId: individual2Id,
+                                relationship: relationship,
+                                individual1_id: individual1Id,
+                                individual2_id: individual2Id
+                            });
+                        }
+                        
+                        // if (relationsMap[individual2Id]) {
+                        //     relationsMap[individual2Id].push({
+                        //         relatedId: individual1Id,
+                        //         relationship: relationship
+                        //     });
+                        // }
+                    });
+                    
+                    // Find all parent-child relationships
+                    const parentChildRelations = [];
+                    
+                    // For each individual, find their parents and children
+                    individuals.forEach(individual => {
+                        const individualId = individual.id;
+                        const relations = relationsMap[individualId] || [];
+                        
+                        relations.forEach(relation => {
+                            const relatedId = relation.relatedId;
+                            const relationship = relation.relationship.toLowerCase();
+                            
+                            // Check if this is a parent-child relationship
+                            if (relationship.includes('father') || relationship.includes('mother') || 
+                                relationship.includes('son') || relationship.includes('daughter')) {
+                                
+                                // Determine who is the parent and who is the child
+                                let parentId, childId;
+                                
+                                if (relationship.includes('father') || relationship.includes('mother')) {
+                                    // The current individual is the parent
+                                    parentId = individualId;
+                                    childId = relation.individual2_id;
+                                } else {
+                                    // The current individual is the child
+                                    parentId = relatedId;
+                                    childId = individualId;
+                                }
+                                
+                                // Add to parent-child relations if not already added
+                                const relationExists = parentChildRelations.some(r => 
+                                    (r.parentId === parentId && r.childId === childId) || 
+                                    (r.parentId === childId && r.childId === parentId)
+                                );
+                                
+                                if (!relationExists) {
+                                    parentChildRelations.push({
+                                        parentId: parentId,
+                                        childId: childId,
+                                        relationship: relationship
+                                    });
+                                }
+                            }
+                        });
+                    });
+                    
+                    console.log('Parent-child relations:', parentChildRelations);
+                    
+                    // Create a map of children for each parent
+                    const childrenMap = {};
+                    individuals.forEach(individual => {
+                        childrenMap[individual.id] = [];
+                    });
+                    
+                    // Populate the children map
+                    parentChildRelations.forEach(relation => {
+                        const parentId = relation.parentId;
+                        const childId = relation.childId;
+                        
+                        if (childrenMap[parentId]) {
+                            childrenMap[parentId].push({
+                                id: childId,
+                                relationship: relation.relationship
+                            });
+                        }
+                    });
+                    
+                    // Find the root nodes (individuals with no parents)
+                    const rootNodes = [];
+                    const hasParent = new Set();
+                    
+                    parentChildRelations.forEach(relation => {
+                        hasParent.add(relation.childId);
+                    });
+                    console.log(hasParent)
+                    
+                    individuals.forEach(individual => {
+                        if (!hasParent.has(parseInt(individual.id))) {
+                            rootNodes.push(parseInt(individual.id));
+                        }
+                    });
+                    window.individuals = individuals    
+                    window.hasParent = hasParent
+                    window.rootNodes = rootNodes
+
+                    
+                    console.log('Root nodes:', rootNodes);
+                    
+                    // If no root nodes found, use the individual with the most children
+                    if (rootNodes.length === 0) {
+                        let maxChildren = 0;
+                        let rootId = null;
+                        
+                        for (const id in childrenMap) {
+                            if (childrenMap[id].length > maxChildren) {
+                                maxChildren = childrenMap[id].length;
+                                rootId = id;
+                            }
+                        }
+                        
+                        if (rootId) {
+                            rootNodes.push(rootId);
+                        }
+                    }
+                    
+                    // If still no root nodes, use the first individual
+                    if (rootNodes.length === 0 && individuals.length > 0) {
+                        rootNodes.push(individuals[0].id);
+                    }
+                    
+                    // Build the tree structure for each root node
+                    const trees = rootNodes.map(rootId => buildTreeStructureFromRoot(rootId, individualsMap, childrenMap));
+                    
+                    // If multiple trees, create a virtual root
+                    let treeData;
+                    if (trees.length > 1) {
+                        treeData = {
+                            id: 'root',
+                            name: 'Family Trees',
+                            gender: 'unknown',
+                            children: trees
+                        };
+                    } else if (trees.length === 1) {
+                        treeData = trees[0];
+                    } else {
+                        throw new Error('Could not build any family trees');
+                    }
+                    
+                    console.log('Tree structure:', treeData);
+                    
+                    // Visualize the tree with D3.js
+                    visualizeTree(treeData);
+                    
+                    // Switch to the tree tab
+                    document.querySelector('.tab[data-tab="tree"]').click();
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    showError(error.message);
+                } finally {
+                    loadingDiv.style.display = 'none';
+                }
+            }
+            
+            // Function to build the tree structure from a root node
+            function buildTreeStructureFromRoot(nodeId, individualsMap, childrenMap, visited = new Set()) {
+                // Stop condition: if we've already visited this node, return null to prevent infinite loops
+                if (visited.has(nodeId)) {
+                    console.log(`Cycle detected at node ${nodeId}, stopping recursion`);
+                    return null;
+                }
+                
+                // Mark this node as visited
+                visited.add(nodeId);
+                
+                const node = individualsMap[nodeId];
+                if (!node) return null;
+                
+                const children = [];
+                const childRelations = childrenMap[nodeId] || [];
+                
+                // Process each child
+                childRelations.forEach(childRelation => {
+                    const childId = childRelation.id;
+                    const relationship = childRelation.relationship;
+                    
+                    // Add the child to the tree
+                    const childNode = individualsMap[childId];
+                    if (childNode) {
+                        // Create a new Set for the child to avoid modifying the parent's visited set
+                        const childVisited = new Set(visited);
+                        const childTree = buildTreeStructureFromRoot(childNode.id, individualsMap, childrenMap, childVisited);
+                        
+                        if (childTree) {
+                            children.push({
+                                id: childNode.id,
+                                name: childNode.name,
+                                gender: childNode.gender,
+                                relationship: relationship,
+                                children: childTree.children
+                            });
+                        }
+                    }
+                });
+                
+                return {
+                    id: node.id,
+                    name: node.name,
+                    gender: node.gender,
+                    children: children
+                };
+            }
+            
+            // Function to visualize the tree with D3.js
+            function visualizeTree(data) {
+                // Clear previous tree
+                d3.select("#tree-container").html("");
+                
+                // Set the dimensions and margins of the diagram
+                const margin = {top: 20, right: 90, bottom: 30, left: 90};
+                const width = 960 - margin.left - margin.right;
+                const height = 500 - margin.top - margin.bottom;
+                
+                // Declares a tree layout and assigns the size
+                const treemap = d3.tree().size([height, width]);
+                
+                // Assigns parent, children, height, depth
+                const root = d3.hierarchy(data);
+                const nodes = treemap(root);
+                
+                // Append the svg object to the container
+                const svg = d3.select("#tree-container").append("svg")
+                    .attr("width", width + margin.right + margin.left)
+                    .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                
+                // Add links between nodes
+                const link = svg.selectAll(".link")
+                    .data(nodes.descendants().slice(1))
+                    .enter().append("path")
+                    .attr("class", "link")
+                    .attr("d", function(d) {
+                        return "M" + d.y + "," + d.x
+                            + "C" + (d.y + d.parent.y) / 2 + "," + d.x
+                            + " " + (d.y + d.parent.y) / 2 + "," + d.parent.x
+                            + " " + d.parent.y + "," + d.parent.x;
+                    });
+                
+                // Add nodes
+                const node = svg.selectAll(".node")
+                    .data(nodes.descendants())
+                    .enter().append("g")
+                    .attr("class", function(d) {
+                        return "node" + (d.data.gender === "male" ? " male" : " female");
+                    })
+                    .attr("transform", function(d) {
+                        return "translate(" + d.y + "," + d.x + ")";
+                    });
+                
+                // Add circles for the nodes
+                node.append("circle")
+                    .attr("r", 10);
+                
+                // Add labels for the nodes
+                node.append("text")
+                    .attr("dy", ".35em")
+                    .attr("x", function(d) {
+                        return d.children ? -13 : 13;
+                    })
+                    .style("text-anchor", function(d) {
+                        return d.children ? "end" : "start";
+                    })
+                    .text(function(d) {
+                        return d.data.name;
+                    });
+                
+                // Add relationship labels
+                node.filter(function(d) {
+                    return d.data.relationship;
+                }).append("text")
+                    .attr("dy", "1.5em")
+                    .attr("x", function(d) {
+                        return d.children ? -13 : 13;
+                    })
+                    .style("text-anchor", function(d) {
+                        return d.children ? "end" : "start";
+                    })
+                    .style("font-size", "10px")
+                    .style("fill", "#666")
+                    .text(function(d) {
+                        return d.data.relationship;
+                    });
+            }
+            
+            // Event listeners for buttons
+            searchButton.addEventListener('click', () => fetchFamilyRelations());
+            searchFamilyButton.addEventListener('click', () => {
+                const familyName = familyNameInput.value.trim();
+                if (!familyName) {
+                    showError('Please enter a family name');
+                    return;
+                }
+                fetchFamilyRelations(familyName);
+            });
+            getIndividualsButton.addEventListener('click', () => fetchIndividuals());
+            buildTreeButton.addEventListener('click', () => buildFamilyTree());
+            
+            // Also allow pressing Enter
+            familyNameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchFamilyButton.click();
+                }
+            });
+            
+            function showError(message) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                resultDiv.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html> 

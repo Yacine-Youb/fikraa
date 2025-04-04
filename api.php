@@ -20,9 +20,9 @@ try {
     $table = $_GET['table'] ?? null;
     $id = $_GET['id'] ?? null;
 
-    // Family tree endpoint
-    if ($table === "family_tree") {
-        getFamilyTree($conn);
+    // Family relations endpoint
+    if ($table === "family_relations") {
+        getFamilyRelations($conn);
         exit;
     }
 
@@ -254,59 +254,40 @@ try {
             $response = $conn->query($query);
             echo json_encode(["status" => $response ? "success" : "error"]);
             break;
-
-        default:
-            echo json_encode(["status" => "error", "message" => "Invalid request"]);
     }
-
 } catch (Exception $e) {
-    error_log("API Error: " . $e->getMessage());
-    echo json_encode([
-        "status" => "error",
-        "message" => "An error occurred",
-        "details" => $e->getMessage()
-    ]);
+    error_log($e->getMessage());
+    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
 } finally {
-    // Clean any output buffer
-    ob_end_clean();
-    $conn->close();
+    if (isset($conn)) {
+        $conn->close();
+    }
 }
 
-function getFamilyTree($conn) {
-    $familyName = $_GET['family'] ?? '';
-    
-    if (empty($familyName)) {
-        echo json_encode(["status" => "error", "message" => "Family name is required"]);
-        return;
-    }
-    
+/**
+ * Get family relations from the database
+ * 
+ * @param mysqli $conn Database connection
+ * @return void Outputs JSON response
+ */
+function getFamilyRelations($conn) {
     try {
-        // Get individuals with this family name
-        $query = "SELECT * FROM individuals WHERE last_name = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("s", $familyName);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        // Check if a specific family name is provided
+        $familyName = $_GET['family'] ?? '';
         
-        $individuals = [];
-        while ($row = $result->fetch_assoc()) {
-            $individuals[] = $row;
+        // Base query to get all family relations
+        $query = "SELECT id, individual1_id, individual2_id, relationship FROM family_relations";
+        
+        // If a family name is provided, filter by that family
+        if (!empty($familyName)) {
+            $query .= " WHERE individual1_id IN (SELECT id FROM individuals WHERE last_name = ?) 
+                        OR individual2_id IN (SELECT id FROM individuals WHERE last_name = ?)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("ss", $familyName, $familyName);
+        } else {
+            $stmt = $conn->prepare($query);
         }
         
-        if (empty($individuals)) {
-            echo json_encode(["status" => "error", "message" => "No family found with that name"]);
-            return;
-        }
-        
-        // Get all relationships for these individuals
-        $individualIds = array_column($individuals, 'id');
-        $placeholders = str_repeat('?,', count($individualIds) - 1) . '?';
-        
-        $query = "SELECT * FROM family_relations 
-                  WHERE individual1_id IN ($placeholders) OR individual2_id IN ($placeholders)";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param(str_repeat('i', count($individualIds) * 2), 
-                         ...array_merge($individualIds, $individualIds));
         $stmt->execute();
         $result = $stmt->get_result();
         
@@ -315,176 +296,18 @@ function getFamilyTree($conn) {
             $relations[] = $row;
         }
         
-        // Build the family tree structure
-        $tree = buildFamilyTree($conn, $individuals, $relations);
-        
+        // Return the relations
         echo json_encode([
             "status" => "success",
-            "data" => $tree
+            "count" => count($relations),
+            "data" => $relations
         ]);
         
-    } catch(Exception $e) {
-        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    } catch (Exception $e) {
+        echo json_encode([
+            "status" => "error",
+            "message" => $e->getMessage()
+        ]);
     }
-}
-
-/**
- * Builds a family tree structure based on the new relationship types
- */
-function buildFamilyTree($conn, $individuals, $relations) {
-    // Create a map of individuals by ID for quick lookup
-    $individualsMap = [];
-    foreach ($individuals as $individual) {
-        $individualsMap[$individual['id']] = $individual;
-    }
-    
-    // Create a map of relationships
-    $relationsMap = [];
-    foreach ($relations as $relation) {
-        $id1 = $relation['individual1_id'];
-        $id2 = $relation['individual2_id'];
-        $relationship = $relation['relationship'];
-        
-        // Store both directions of the relationship
-        if (!isset($relationsMap[$id1])) {
-            $relationsMap[$id1] = [];
-        }
-        if (!isset($relationsMap[$id2])) {
-            $relationsMap[$id2] = [];
-        }
-        
-        // Store the relationship with the correct direction
-        if ($relationship === 'Father') {
-            // If id1 is the father, then id2 is the child
-            $relationsMap[$id1][] = ['individual_id' => $id2, 'relationship' => 'Son/Daughter'];
-            $relationsMap[$id2][] = ['individual_id' => $id1, 'relationship' => 'Father'];
-        } else if ($relationship === 'Son' || $relationship === 'Daughter') {
-            // If id1 is the child, then id2 is the parent
-            $relationsMap[$id1][] = ['individual_id' => $id2, 'relationship' => 'Father'];
-            $relationsMap[$id2][] = ['individual_id' => $id1, 'relationship' => $relationship];
-        }
-    }
-    
-    // Find the oldest generation (potential grandparents)
-    $oldestGeneration = findOldestGeneration($individualsMap, $relationsMap);
-    
-    // Build the tree starting from the oldest generation
-    $tree = [];
-    foreach ($oldestGeneration as $rootId) {
-        $tree[] = buildSubtree($rootId, $individualsMap, $relationsMap);
-    }
-    
-    return [
-        'individuals' => $individualsMap,
-        'relations' => $relationsMap,
-        'tree' => $tree
-    ];
-}
-
-/**
- * Finds the oldest generation in the family tree
- */
-function findOldestGeneration($individualsMap, $relationsMap) {
-    $oldestGeneration = [];
-    $visited = [];
-    
-    // Start with all individuals
-    $allIds = array_keys($individualsMap);
-    
-    // For each individual, try to find their ancestors
-    foreach ($allIds as $id) {
-        if (isset($visited[$id])) continue;
-        
-        // Find the oldest ancestor for this individual
-        $oldestAncestor = findOldestAncestor($id, $individualsMap, $relationsMap, $visited);
-        
-        if ($oldestAncestor && !in_array($oldestAncestor, $oldestGeneration)) {
-            $oldestGeneration[] = $oldestAncestor;
-        }
-    }
-    
-    // If no oldest generation was found, use all individuals as roots
-    if (empty($oldestGeneration)) {
-        $oldestGeneration = $allIds;
-    }
-    
-    return $oldestGeneration;
-}
-
-/**
- * Recursively finds the oldest ancestor for a given individual
- */
-function findOldestAncestor($id, $individualsMap, $relationsMap, &$visited) {
-    $visited[$id] = true;
-    
-    // If this individual has no relations, they are their own oldest ancestor
-    if (!isset($relationsMap[$id]) || empty($relationsMap[$id])) {
-        return $id;
-    }
-    
-    // Look for parents in the relations
-    $parents = [];
-    foreach ($relationsMap[$id] as $relation) {
-        if ($relation['relationship'] === 'Father') {
-            $parents[] = $relation['individual_id'];
-        }
-    }
-    
-    // If no parents found, this individual is the oldest ancestor
-    if (empty($parents)) {
-        return $id;
-    }
-    
-    // Recursively find the oldest ancestor for each parent
-    $oldestAncestors = [];
-    foreach ($parents as $parentId) {
-        if (!isset($visited[$parentId])) {
-            $oldestAncestors[] = findOldestAncestor($parentId, $individualsMap, $relationsMap, $visited);
-        }
-    }
-    
-    // If no oldest ancestors found among parents, use the individual itself
-    if (empty($oldestAncestors)) {
-        return $id;
-    }
-    
-    // Return the oldest ancestor (assuming the first one is the oldest)
-    return $oldestAncestors[0];
-}
-
-/**
- * Builds a subtree starting from a root individual
- */
-function buildSubtree($rootId, $individualsMap, $relationsMap) {
-    $root = $individualsMap[$rootId];
-    $subtree = [
-        'id' => $rootId,
-        'name' => $root['first_name'] . ' ' . $root['last_name'],
-        'gender' => $root['gender'],
-        'birth_date' => $root['birth_date'],
-        'children' => []
-    ];
-    
-    // Find children
-    if (isset($relationsMap[$rootId])) {
-        foreach ($relationsMap[$rootId] as $relation) {
-            if ($relation['relationship'] === 'Son' || $relation['relationship'] === 'Daughter') {
-                $childId = $relation['individual_id'];
-                // Check if this child is already in the tree to avoid duplicates
-                $childExists = false;
-                foreach ($subtree['children'] as $existingChild) {
-                    if ($existingChild['id'] === $childId) {
-                        $childExists = true;
-                        break;
-                    }
-                }
-                if (!$childExists) {
-                    $subtree['children'][] = buildSubtree($childId, $individualsMap, $relationsMap);
-                }
-            }
-        }
-    }
-    
-    return $subtree;
 }
 ?>
