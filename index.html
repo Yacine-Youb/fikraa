@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Information Form</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        
+        hr {
+            border: 0;
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 20px 0;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        .note {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        
+        .address-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .optional {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-align: right;
+            margin-top: 5px;
+        }
+        
+        .save-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .save-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .radio-group {
+            margin-bottom: 15px;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .radio-option input {
+            width: auto;
+            margin-right: 10px;
+        }
+        
+        .conditional-field {
+            display: none;
+            margin-top: 10px;
+            margin-left: 25px;
+            animation: fadeIn 0.3s;
+        }
+        
+        .conditional-field-group {
+            margin-bottom: 10px;
+        }
+        
+        .degree-level {
+            display: none;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .marital-status {
+            margin: 20px 0;
+        }
+        
+        .marital-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .marital-option {
+            display: flex;
+            align-items: center;
+        }
+        
+        .marital-option input {
+            margin-right: 8px;
+        }
+        
+        /* Adjust spacing */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .status-section {
+            margin: 25px 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        
+        .status-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .status-option {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .status-option:hover {
+            background-color: #f0f8ff;
+        }
+        
+        .status-option input {
+            margin-right: 10px;
+        }
+        
+        .status-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        /* Make marital status options more compact */
+        .marital-options {
+            gap: 10px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #e6f2ff; /* Light blue background */
+        }
+        
+        form {
+            background-color: white; /* White form background */
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        
+        hr {
+            border: 0;
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 20px 0;
+        }
+        
+        /* [Rest of your existing CSS remains the same] */
+        
+        /* Update status section to match blue theme */
+        .status-section {
+            background-color: #f0f7ff; /* Lighter blue background */
+            border: 1px solid #cce0ff;
+        }
+        
+        .save-btn {
+            background-color: #0066cc; /* Darker blue button */
+        }
+        
+        .save-btn:hover {
+            background-color: #0052a3;
+        }
+    </style>
+</head>
+<body>
+    <form>
+        <h1>Profile info</h1>
+        <p class="subtitle">Fill in the data for profile. It will take a couple of minutes.</p>
+        
+        <hr>
+        
+        <h2>Personal info</h2>
+        
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" value="jhon">
+        </div>
+
+        <div class="form-group">
+            <label>Last name</label>
+            <input type="text" value="doe">
+        </div>
+        <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="dob" name="dob">
+        </div>
+
+        <div class="form-group">
+            <label>Tel</label>
+            <input type="text" value="0xxxxxxxx">
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="text" value="fikra@.com">
+        </div>
+        
+        <p>Select your gender:</p>
+            
+            
+            
+        <input type="radio" id="phone" name="contact" value="phone">
+        <label for="phone">Male</label>
+        
+        <input type="radio" id="mail" name="contact" value="mail">
+        <label for="mail">Female</label>
+
+
+
+        <div class="form-group marital-status">
+            <label>Marital Status</label>
+            <div class="marital-options">
+                <div class="marital-option">
+                    <input type="radio" id="single" name="marital_status" value="single" checked>
+                    <label for="single">Single</label>
+                </div>
+                <div class="marital-option">
+                    <input type="radio" id="married" name="marital_status" value="married">
+                    <label for="married">Married</label>
+                </div>
+                <div class="marital-option">
+                    <input type="radio" id="divorced" name="marital_status" value="divorced">
+                    <label for="divorced">Divorced</label>
+                </div>
+                <div class="marital-option">
+                    <input type="radio" id="widowed" name="marital_status" value="widowed">
+                    <label for="widowed">Widowed</label>
+                </div>
+                <div class="marital-option">
+                    <input type="radio" id="separated" name="marital_status" value="separated">
+                    <label for="separated">Separated</label>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="address-grid">
+            <div class="form-group">
+                <label>City</label>
+                <input type="text" value="New York">
+            </div>
+            
+            <div class="form-group">
+                <label>Country</label>
+                <input type="text" value="USA">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Identity card code</label>
+            <input type="text" value="10011">
+        </div>
+        <div class="form-group status-section">
+            <div class="status-title">Additional Status (Select all that apply)</div>
+            <div class="status-options">
+                <div class="status-option">
+                    <input type="checkbox" id="orphan" name="additional_status[]" value="orphan">
+                    <label for="orphan">Orphan</label>
+                </div>
+                <div class="status-option">
+                    <input type="checkbox" id="patient" name="additional_status[]" value="patient">
+                    <label for="patient">Patient</label>
+                </div>
+                <div class="status-option">
+                    <input type="checkbox" id="needy" name="additional_status[]" value="needy">
+                    <label for="needy">Needy</label>
+                </div>
+                <div class="status-option">
+                    <input type="checkbox" id="poor" name="additional_status[]" value="poor">
+                    <label for="poor">Poor</label>
+                </div>
+                <div class="status-option">
+                    <input type="checkbox" id="disabled" name="additional_status[]" value="disabled">
+                    <label for="disabled">Disabled</label>
+                </div>
+                <div class="status-option">
+                    <input type="checkbox" id="refugee" name="additional_status[]" value="refugee">
+                    <label for="refugee">Refugee</label>
+                </div>
+            </div>
+        </div>
+        <div class="radio-group">
+            <label>Occupation status:</label>
+            
+            <div class="radio-option">
+                <input type="radio" id="student" name="occupation" value="student" checked>
+                <label for="student">Student</label>
+            </div>
+            <div id="student-field" class="conditional-field">
+                <div class="conditional-field-group">
+                    <label>Institution Type</label>
+                    <select id="student-institution" onchange="updateStudentOptions()">
+                        <option value="">Select institution</option>
+                        <option value="high_school">High School (3 years)</option>
+                        <option value="college">College/University</option>
+                        <option value="vocational">Vocational School (3 years)</option>
+                    </select>
+                </div>
+                <div class="conditional-field-group degree-level" id="degree-level">
+                    <label>Degree Level</label>
+                    <select id="degree-type" onchange="updateStudentOptions()">
+                        <option value="bachelor">Bachelor's (3 years)</option>
+                        <option value="master">Master's (2 years)</option>
+                        <option value="phd">Doctorate</option>
+                    </select>
+                </div>
+                <div class="conditional-field-group">
+                    <label>Year of study</label>
+                    <select id="student-year">
+                        <option value="">Select year</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="radio-option">
+                <input type="radio" id="worker" name="occupation" value="worker">
+                <label for="worker">Worker</label>
+            </div>
+            <div id="worker-field" class="conditional-field">
+                <label>Occupation</label>
+                <select>
+                    <option value="">Select occupation</option>
+                    <option value="developer">Software Developer</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="engineer">Engineer</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+                   <!-- Additional Status Section -->
+       
+            
+            <div class="radio-option">
+                <input type="radio" id="pupil" name="occupation" value="pupil">
+                <label for="pupil">Pupil</label>
+            </div>
+            <div id="pupil-field" class="conditional-field">
+                <div class="conditional-field-group">
+                    <label>School Level</label>
+                    <select id="pupil-school" onchange="updatePupilOptions()">
+                        <option value="">Select school level</option>
+                        <option value="elementary">Elementary School (5 years)</option>
+                        <option value="middle">Middle School (4 years)</option>
+                        <option value="high">High School (3 years)</option>
+                    </select>
+                </div>
+                <div class="conditional-field-group">
+                    <label>Grade</label>
+                    <select id="pupil-grade">
+                        <option value="">Select grade</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="radio-option">
+                <input type="radio" id="retired" name="occupation" value="retired">
+                <label for="retired">Retired</label>
+            </div>
+            <div id="retired-field" class="conditional-field">
+                <label>Previous job</label>
+                <select>
+                    <option value="">Select previous job</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="engineer">Engineer</option>
+                    <option value="manager">Manager</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+        </div>
+        
+     
+        
+       
+        <div class="status">
+            <input type="checkbox" id="terms" name="agreee" value="terms">
+            <label for="orphan">Agree To terms</label>
+        </div>
+           
+        <hr>
+          </form>
+        
+        <button type="submit" class="save-btn">Save</button>
+     
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const occupationRadios = document.querySelectorAll('input[name="occupation"]');
+            
+            // Show the appropriate field based on initial selection
+            toggleFields();
+            updateStudentOptions();
+            updatePupilOptions();
+            
+            // Add event listeners to all radio buttons
+            occupationRadios.forEach(radio => {
+                radio.addEventListener('change', toggleFields);
+            });
+            
+            function toggleFields() {
+                // Hide all conditional fields first
+                document.querySelectorAll('.conditional-field').forEach(field => {
+                    field.style.display = 'none';
+                });
+                
+                // Show the field for the selected option
+                const selectedValue = document.querySelector('input[name="occupation"]:checked').value;
+                document.getElementById(`${selectedValue}-field`).style.display = 'block';
+            }
+        });
+
+        function updateStudentOptions() {
+            const institution = document.getElementById('student-institution').value;
+            const degreeLevel = document.getElementById('degree-level');
+            const degreeType = document.getElementById('degree-type');
+            const yearSelect = document.getElementById('student-year');
+            
+            yearSelect.innerHTML = '<option value="">Select year</option>';
+            
+            // Show/hide degree level for college/university
+            if (institution === 'college') {
+                degreeLevel.style.display = 'block';
+            } else {
+                degreeLevel.style.display = 'none';
+            }
+            
+            // Set years based on selection
+            let years = 0;
+            if (institution === 'high_school') {
+                years = 3;
+            } else if (institution === 'vocational') {
+                years = 3;
+            } else if (institution === 'college') {
+                if (degreeType.value === 'bachelor') {
+                    years = 3;
+                } else if (degreeType.value === 'master') {
+                    years = 2;
+                } else if (degreeType.value === 'phd') {
+                    years = 1; // Doctorate typically varies, showing 1 as placeholder
+                }
+            }
+            
+            // Populate years
+            for (let i = 1; i <= years; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.text = getOrdinalNumber(i) + ' Year';
+                yearSelect.appendChild(option);
+            }
+        }
+
+        function updatePupilOptions() {
+            const schoolLevel = document.getElementById('pupil-school').value;
+            const gradeSelect = document.getElementById('pupil-grade');
+            
+            gradeSelect.innerHTML = '<option value="">Select grade</option>';
+            
+            let grades = 0;
+            if (schoolLevel === 'elementary') {
+                grades = 5;
+            } else if (schoolLevel === 'middle') {
+                grades = 4;
+            } else if (schoolLevel === 'high') {
+                grades = 3;
+            }
+            
+            // Populate grades
+            for (let i = 1; i <= grades; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.text = getOrdinalNumber(i) + ' Grade';
+                gradeSelect.appendChild(option);
+            }
+        }
+
+        function getOrdinalNumber(n) {
+            const suffixes = ['th', 'st', 'nd', 'rd'];
+            const v = n % 100;
+            return n + (suffixes[(v-20)%10] || suffixes[v] || suffixes[0]);
+        }
+    </script>
+</body>
+</html>
